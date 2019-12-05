@@ -94,9 +94,9 @@ def VegetationClassification(Img):
     import numpy as np
     
     # use the meanshift segmentation algorithm to segment the original GSV image
+#    print(0)
     (segmented_image, labels_image, number_regions) = pms.segment(Img,spatial_radius=6,
                                                      range_radius=7, min_density=40)
-    
     I = segmented_image/255.0
     
     red = I[:,:,0]
@@ -106,7 +106,6 @@ def VegetationClassification(Img):
     # calculate the difference between green band with other two bands
     green_red_Diff = green - red
     green_blue_Diff = green - blue
-    
     ExG = green_red_Diff + green_blue_Diff
     diffImg = green_red_Diff*green_blue_Diff
     
@@ -172,7 +171,7 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
     from PIL import Image
     import numpy as np
     import requests
-    from StringIO import StringIO
+    from io import StringIO,BytesIO
     
     
     # read the Google Street View API key files, you can also replace these keys by your own
@@ -197,7 +196,7 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
     
     # the input GSV info should be in a folder
     if not os.path.isdir(GSVinfoFolder):
-        print 'You should input a folder for GSV metadata'
+        print ('You should input a folder for GSV metadata')
         return
     else:
         allTxtFiles = os.listdir(GSVinfoFolder)
@@ -214,7 +213,9 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
             panoLonLst = []
             panoLatLst = []
             
+
             # loop all lines in the txt files
+            
             for line in lines:
                 metadata = line.split(" ")
                 panoID = metadata[1]
@@ -223,7 +224,7 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
                 lon = metadata[5]
                 lat = metadata[7][:-1]
                 
-                # print (lon, lat, month, panoID, panoDate)
+                print (lon, lat, month, panoID, panoDate)
                 
                 # in case, the longitude and latitude are invalide
                 if len(lon)<3:
@@ -244,7 +245,7 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
             
             
             # check whether the file already generated, if yes, skip. Therefore, you can run several process at same time using this code.
-            print GreenViewTxtFile
+            #print (GreenViewTxtFile)
             if os.path.exists(GreenViewTxtFile):
                 continue
             
@@ -264,32 +265,32 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
                     greenPercent = 0.0
 
                     for heading in headingArr:
-                        print "Heading is: ",heading
+                        print ("Heading is: ",heading)
                         
                         # using different keys for different process, each key can only request 25,000 imgs every 24 hours
-                        URL = "http://maps.googleapis.com/maps/api/streetview?size=400x400&pano=%s&fov=60&heading=%d&pitch=%d&sensor=false&key=AIzaSyAwLr6Oz0omObrCJ4n6lI4VbCCvmaL1Z3Y"%(panoID,heading,pitch)
-                        
+                        URL = "http://maps.googleapis.com/maps/api/streetview?size=400x400&pano=%s&fov=60&heading=%d&pitch=%d&sensor=false&key=%s"%(panoID,heading,pitch,key)
                         # let the code to pause by 1s, in order to not go over data limitation of Google quota
                         time.sleep(1)
                         
                         # classify the GSV images and calcuate the GVI
                         try:
                             response = requests.get(URL)
-                            im = np.array(Image.open(StringIO(response.content)))
+                            im = np.array(Image.open(BytesIO(response.content)))
                             percent = VegetationClassification(im)
                             greenPercent = greenPercent + percent
 
                         # if the GSV images are not download successfully or failed to run, then return a null value
-                        except:
+                        except Exception as e:
+                            #print("error : ",str(e)) # remove the comment if you want to debug any error 
                             greenPercent = -1000
                             break
 
                     # calculate the green view index by averaging six percents from six images
                     greenViewVal = greenPercent/numGSVImg
-                    print 'The greenview: %s, pano: %s, (%s, %s)'%(greenViewVal, panoID, lat, lon)
+                    print ('The greenview: {0}, pano: {1}, ({2}, {3})'.format(greenViewVal, panoID, lat, lon))
 
                     # write the result and the pano info to the result txt file
-                    lineTxt = 'panoID: %s panoDate: %s longitude: %s latitude: %s, greenview: %s\n'%(panoID, panoDate, lon, lat, greenViewVal)
+                    lineTxt = 'panoID: {0} panoDate: {1} longitude: {2} latitude: {3}, greenview: {4}\n'.format(panoID, panoDate, lon, lat, greenViewVal)
                     gvResTxt.write(lineTxt)
 
 
@@ -298,7 +299,6 @@ if __name__ == "__main__":
     
     import os,os.path
     import itertools
-    
     
     GSVinfoRoot = 'MYPATH//spatial-data/metadata'
     outputTextPath = r'MYPATH//spatial-data/greenViewRes'
