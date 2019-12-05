@@ -16,9 +16,9 @@ def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
         
     '''
     
-    import urllib,urllib2
+    import urllib
+    import urllib.request as urllib2
     import xmltodict
-    import cStringIO
     import ogr, osr
     import time
     import os,os.path
@@ -40,7 +40,7 @@ def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
     # loop all the features in the featureclass
     feature = layer.GetNextFeature()
     featureNum = layer.GetFeatureCount()
-    batch = featureNum/num
+    batch = int(featureNum/num)
     
     for b in range(batch):
         # for each batch process num GSV site
@@ -49,7 +49,7 @@ def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
         if end > featureNum:
             end = featureNum
         
-        ouputTextFile = 'Pnt_start%s_end%s.txt'%(start,end)
+        ouputTextFile = 'Pnt_start{0}_end{1}.txt'.format(start,end)
         ouputGSVinfoFile = os.path.join(ouputTextFolder,ouputTextFile)
         
         # skip over those existing txt files
@@ -72,11 +72,11 @@ def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
                 key = r'' #Input Your Key here 
                 
                 # get the meta data of panoramas 
-                urlAddress = r'http://maps.google.com/cbk?output=xml&ll=%s,%s'%(lat,lon)
+                urlAddress = r'http://maps.google.com/cbk?output=xml&ll={0},{1}'.format(lon,lat)
                 
                 time.sleep(0.05)
                 # the output result of the meta data is a xml object
-                metaDataxml = urllib2.urlopen(urlAddress)
+                metaDataxml = urllib2.urlopen(urlAddress,timeout=30)
                 metaData = metaDataxml.read()    
                 
                 data = xmltodict.parse(metaData)
@@ -88,13 +88,13 @@ def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
                     panoInfo = data['panorama']['data_properties']
                                         
                     # get the meta data of the panorama
-                    panoDate = panoInfo.items()[4][1]
-                    panoId = panoInfo.items()[5][1]
-                    panoLat = panoInfo.items()[8][1]
-                    panoLon = panoInfo.items()[9][1]
+                    panoDate = list(panoInfo.items())[4][1]
+                    panoId = list(panoInfo.items())[5][1]
+                    panoLat = list(panoInfo.items())[8][1]
+                    panoLon = list(panoInfo.items())[9][1]
                     
-                    print 'The coordinate (%s,%s), panoId is: %s, panoDate is: %s'%(panoLon,panoLat,panoId, panoDate)
-                    lineTxt = 'panoID: %s panoDate: %s longitude: %s latitude: %s\n'%(panoId, panoDate, panoLon, panoLat)
+                    print ('The coordinate ({0},{1}), panoId is: {2}, panoDate is: {3}'.format(panoLon,panoLat,panoId, panoDate))
+                    lineTxt = 'panoID: {0} panoDate: {1} longitude: {2} latitude: {3}\n'.format(panoId, panoDate, panoLon, panoLat)
                     panoInfoText.write(lineTxt)
                     
         panoInfoText.close()
